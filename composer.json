@@ -22,7 +22,7 @@
         "lib-openssl" : "*"
     },
     "autoload": {
-        "psr-4": { "BankID\\": "classes/" }
+        "classmap": ["classes/"]
     },
     "repositories": [
         {

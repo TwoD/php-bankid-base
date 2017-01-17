@@ -11,7 +11,8 @@
 
 namespace BankID;
 
-require_once( __DIR__ . '/class-utils.php' );
+use \SoapClient as SoapClient;
+use \Exception as Exception;
 
 class BankID
 {
@@ -39,9 +40,7 @@ class BankID
      * @var         string          $wsdl_url       URL to the API structure.
      * @var         string          $verify_cert    Path to the local CA file to verify the central BankID Server.
      */
-    protected $_api_url;
-    protected $_wsdl_url;
-    protected $_verify_cert;
+    private $_settings;
 
     /**
      * CN to match.
@@ -56,49 +55,83 @@ class BankID
      * it's run as a test or not.
      *
      * @since       1.0.0
-     * @param       string      $certs      Name of the certifications to load.
-     * @param       bool        $test       Whether or not to run in test mode.
+     * @param       options     $options       associative array with your setup option.
      */
-    public function __construct( $certs, $test = false )
+    public function __construct(Array $user_settings = array())
     {
-        try {
-            $this->_certs = Utils::get_certificate( $certs );
 
-            if ( $test ) {
-                $this->_api_url = 'https://appapi.test.bankid.com/rp/v4';
-                $this->_wsdl_url = 'https://appapi.test.bankid.com/rp/v4?wsdl';
-                $this->_verify_cert = Utils::get_certificate( 'appapi.test.bankid.com.pem' );
-                $this->_cn_match = 'BankID SSL Root Certification Authority TEST';
-            } else {
-                $this->_api_url = 'https://appapi.bankid.com/rp/v4';
-                $this->_wsdl_url = 'https://appapi.bankid.com/rp/v4?wsdl';
-                $this->_verify_cert = Utils::get_certificate( 'appapi.bankid.com.pem' );
-                $this->_cn_match = 'BankID SSL Root Certification Authority';
-            }
+        $fixed_settings = array(
+             'test_server' => array(
+                 'api_url'   => 'https://appapi.test.bankid.com/rp/v4',
+                 'wdsl_url'  => 'https://appapi.test.bankid.com/rp/v4?wsdl',
+                 'cert_path' => __DIR__ . '/../certs/appapi.test.bankid.com.pem',
+                 'peer_name' => 'appapi.test.bankid.com'
+             ),
+             'production_server' => array(
+                 'api_url'   => 'https://appapi.bankid.com/rp/v4',
+                 'wdsl_url'  => 'https://appapi.bankid.com/rp/v4?wsdl',
+                 'cert_path' => __DIR__ . '/../certs/appapi.bankid.com.pem',
+                 'peer_name' => 'appapi.bankid.com'
+             )
+        );
 
-            // Since PHP has quite insecure options from the get go, let's fix that.
+        $default_settings = array(
+            "production"  => false,
+            "certificate" => ''
+        );
+
+        // check options for unknown entries
+        $invalid_settings = array_diff_key($user_settings, $default_settings);
+        if (count($invalid_settings) > 0) {
+            throw new Exception("invalid settings: " . implode(array_keys(', ',$invalid_settings)), 1);
+        }
+
+        // merge the final settings together
+        $this->_settings = array_merge($fixed_settings, array_replace($default_settings, array_intersect_key($user_settings, $default_settings)));
+    }
+
+    private function &connect() {
+        if($this->_soap === null){
+            // open an encrypted connection to the BankID server
+            $server = $this->_settings['production'] ? $this->_settings['production_server'] : $this->_settings['test_server'];
+            $certificate_path = $this->_settings['certificate'];
+
             $context_options = array(
                 'ssl' => array(
-                    'verify_peer'   => true,
-                    'cafile'        => $this->_verify_cert,
-                    'verify_depth'  => 5,
-                    'CN_match'      => $this->_cn_match,
+                    'local_cert'            => $certificate_path,
+                    'cafile'                => $server['cert_path'],
+                    'verify_peer'           => true,
+                    'verify_peer_name'      => true,
+                    'verify_depth'          => 5,
+                    'peer_name'             => $server['peer_name'],
                     'disable_compression'   => true,
                     'SNI_enabled'           => true,
                     'ciphers'               => 'ALL!EXPORT!EXPORT40!EXPORT56!aNULL!LOW!RC4'
                 )
             );
 
+            // make sure test or production RP certificate exists
+            if(!file_exists($certificate_path)){
+                throw new Exception("Unable to load your certificate file! " . $certificate_path, 2);
+            }
+
+            // make sure the bankid server certificate for the selected server exists
+            if(!file_exists($server['cert_path'])){
+                throw new Exception("Unable to find bankid certificate: " . $server['cert_path'], 3);
+            }
+
             $ssl_context = stream_context_create( $context_options );
+            if($ssl_context === null){
+                throw new Exception("Failed to create stream context for communication with the bank-id server (" . $server['peer_name'] . ")", 1);
+            }
 
             // Connect and store our SOAP connection.
-            $this->_soap = new \SOAPClient( $this->_wsdl_url, array(
-                'local_cert' => $this->_certs,
+            $this->_soap = new SoapClient( $server['wdsl_url'], array(
                 'stream_context' => $ssl_context
-            ) );
-        } catch ( \SoapFault $fault ) {
-            // pass
+            ));
         }
+
+        return $this->_soap;
     }
 
     /**
@@ -111,14 +144,17 @@ class BankID
      */
     public function authenticate( $ssn, $kwargs = array() )
     {
+        $error = null;
         try {
+            $soap = $this->connect();
             $kwargs['personalNumber'] = $ssn;
-            $out = $this->_soap->Authenticate( $kwargs );
+            $out = $soap->Authenticate( $kwargs );
         } catch ( \SoapFault $fault ) {
             $out = null;
+            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
         }
 
-        return $out;
+        return array($out, $error);
     }
 
     /**
@@ -133,16 +169,19 @@ class BankID
      */
     public function sign( $ssn, $visible_data, $hidden_data = '', $kwargs = array() )
     {
+        $error = null;
         try {
+            $soap = $this->connect();
             $kwargs['personalNumber'] = $ssn;
             $kwargs['userVisibleData'] = Utils::normalize_text( base64_encode( $visible_data ) );
             $kwargs['userNonVisibleData'] = Utils::normalize_text( base64_encode( $hidden_data ) );
-            $out = $this->_soap->Sign( $kwargs );
+            $out = $soap->Sign( $kwargs );
         } catch ( \SoapFault $fault ) {
             $out = null;
+            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
         }
 
-        return $out;
+        return array($out, $error);
     }
 
     /**
@@ -154,12 +193,15 @@ class BankID
      */
     public function collect( $order_ref )
     {
+        $error = null;
         try {
-            $out = $this->_soap->Collect( $order_ref );
+            $soap = $this->connect();
+            $out = $soap->Collect( $order_ref );
         } catch ( \SoapFault $fault ) {
             $out = null;
+            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
         }
 
-        return $out;
+        return array($out, $error);
     }
 }
