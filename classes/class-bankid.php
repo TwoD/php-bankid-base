@@ -172,7 +172,9 @@ class BankID
         $error = null;
         try {
             $soap = $this->connect();
-            $kwargs['personalNumber'] = $ssn;
+            if (!is_null($ssn)) {
+                $kwargs['personalNumber'] = $ssn;
+            }
             $kwargs['userVisibleData'] = Utils::normalize_text( base64_encode( $visible_data ) );
             $kwargs['userNonVisibleData'] = Utils::normalize_text( base64_encode( $hidden_data ) );
             $out = $soap->Sign( $kwargs );
