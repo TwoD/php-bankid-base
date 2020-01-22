@@ -19,7 +19,8 @@
     "require": {
         "php" : "^5.3 || ^7.0",
         "ext-soap" : "*",
-        "lib-openssl" : "*"
+        "lib-openssl" : "*",
+        "guzzlehttp/guzzle": "~6.0"
     },
     "autoload": {
         "classmap": ["classes/"]

@@ -11,18 +11,22 @@
 
 namespace BankID;
 
-use \SoapClient as SoapClient;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Handler\StreamHandler;
+use GuzzleHttp\HandlerStack;
 use \Exception as Exception;
 
 class BankID
 {
-    /**
-     * SOAPClient to make API requests to the BankID central server.
-     *
-     * @since       1.0.0
-     * @var         SOAPClient      $soap       Current SOAPClient
-     */
-    protected $_soap;
+
+  /**
+   * Guzzle client to make API requests to the BankID central server.
+   *
+   * @since         1.1.0
+   * @var \GuzzleHttp\ClientInterface
+   */
+    protected $client;
 
     /**
      * Certificates to verify against BankID.
@@ -37,7 +41,6 @@ class BankID
      *
      * @since       1.0.0
      * @var         string          $api_url        URL to the API.
-     * @var         string          $wsdl_url       URL to the API structure.
      * @var         string          $verify_cert    Path to the local CA file to verify the central BankID Server.
      */
     private $_settings;
@@ -57,19 +60,21 @@ class BankID
      * @since       1.0.0
      * @param       options     $options       associative array with your setup option.
      */
-    public function __construct(Array $user_settings = array())
+    public function __construct(Array $user_settings = array(), $client = NULL)
     {
+
+      if ($client) {
+        $this->client = $client;
+      }
 
         $fixed_settings = array(
              'test_server' => array(
-                 'api_url'   => 'https://appapi2.test.bankid.com/rp/v4',
-                 'wdsl_url'  => 'https://appapi2.test.bankid.com/rp/v4?wsdl',
+                 'api_url'   => 'https://appapi2.test.bankid.com/rp/v5/',
                  'cert_path' => __DIR__ . '/../certs/appapi2.test.bankid.com.pem',
                  'peer_name' => 'appapi2.test.bankid.com',
              ),
              'production_server' => array(
-                 'api_url'   => 'https://appapi2.bankid.com/rp/v4',
-                 'wdsl_url'  => 'https://appapi2.bankid.com/rp/v4?wsdl',
+                 'api_url'   => 'https://appapi2.bankid.com/rp/v5/',
                  'cert_path' => __DIR__ . '/../certs/appapi2.bankid.com.pem',
                  'peer_name' => 'appapi2.bankid.com',
              )
@@ -90,25 +95,11 @@ class BankID
         $this->_settings = array_merge($fixed_settings, array_replace($default_settings, array_intersect_key($user_settings, $default_settings)));
     }
 
-    private function &connect() {
-        if($this->_soap === null){
+    private function &getClient() {
+        if($this->client === null){
             // open an encrypted connection to the BankID server
             $server = $this->_settings['production'] ? $this->_settings['production_server'] : $this->_settings['test_server'];
             $certificate_path = $this->_settings['certificate'];
-
-            $context_options = array(
-                'ssl' => array(
-                    'local_cert'            => $certificate_path,
-                    'cafile'                => $server['cert_path'],
-                    'verify_peer'           => true,
-                    'verify_peer_name'      => true,
-                    'verify_depth'          => 5,
-                    'peer_name'             => $server['peer_name'],
-                    'disable_compression'   => true,
-                    'SNI_enabled'           => true,
-                    'ciphers'               => 'ALL!EXPORT!EXPORT40!EXPORT56!aNULL!LOW!RC4'
-                )
-            );
 
             // make sure test or production RP certificate exists
             if(!file_exists($certificate_path)){
@@ -120,18 +111,25 @@ class BankID
                 throw new Exception("Unable to find bankid certificate: " . $server['cert_path'], 3);
             }
 
-            $ssl_context = stream_context_create( $context_options );
-            if($ssl_context === null){
-                throw new Exception("Failed to create stream context for communication with the bank-id server (" . $server['peer_name'] . ")", 1);
-            }
-
-            // Connect and store our SOAP connection.
-            $this->_soap = new SoapClient( $server['wdsl_url'], array(
-                'stream_context' => $ssl_context
-            ));
+            $stream_handler = new StreamHandler();
+            $stack = HandlerStack::create($stream_handler);
+            $context_options = array(
+                'base_uri' => $server['api_url'],
+                'ssl' => array(
+                    'verify_depth'          => 5,
+                    'peer_name'             => $server['peer_name'],
+                    'disable_compression'   => true,
+                    'SNI_enabled'           => true,
+                    'ciphers'               => 'ALL!EXPORT!EXPORT40!EXPORT56!aNULL!LOW!RC4'
+                ),
+                'handler' => $stack,
+                'cert' => $certificate_path,
+                'verify' => $server['cert_path'],
+            );
+            $this->client = new Client($context_options);
         }
 
-        return $this->_soap;
+        return $this->client;
     }
 
     /**
@@ -146,12 +144,13 @@ class BankID
     {
         $error = null;
         try {
-            $soap = $this->connect();
+            $rest = $this->getClient();
             $kwargs['personalNumber'] = $ssn;
-            $out = $soap->Authenticate( $kwargs );
-        } catch ( \SoapFault $fault ) {
+            $kwargs += ['endUserIp' => $_SERVER['REMOTE_ADDR']];
+            $out = json_decode($rest->post( 'auth', ['json' => $kwargs] )->getBody()->getContents());
+        } catch ( GuzzleException $fault ) {
             $out = null;
-            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
+            $error = Utils::get_known_error($fault) ?: Utils::INVALID_PARAMETERS;
         }
 
         return array($out, $error);
@@ -171,14 +170,15 @@ class BankID
     {
         $error = null;
         try {
-            $soap = $this->connect();
+            $rest = $this->getClient();
             $kwargs['personalNumber'] = $ssn;
             $kwargs['userVisibleData'] = Utils::normalize_text( base64_encode( $visible_data ) );
             $kwargs['userNonVisibleData'] = Utils::normalize_text( base64_encode( $hidden_data ) );
-            $out = $soap->Sign( $kwargs );
-        } catch ( \SoapFault $fault ) {
+            $kwargs += ['endUserIp' => $_SERVER['REMOTE_ADDR']];
+            $out = json_decode($rest->post('sign', ['json' => $kwargs] )->getBody()->getContents());
+        } catch ( GuzzleException $fault ) {
             $out = null;
-            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
+            $error = Utils::get_known_error($fault) ?: Utils::INVALID_PARAMETERS;
         }
 
         return array($out, $error);
@@ -195,13 +195,35 @@ class BankID
     {
         $error = null;
         try {
-            $soap = $this->connect();
-            $out = $soap->Collect( $order_ref );
-        } catch ( \SoapFault $fault ) {
+            $rest = $this->getClient();
+            $out = json_decode($rest->post('collect', ['json' => ['orderRef' => $order_ref]] )->getBody()->getContents());
+        } catch ( GuzzleException $fault ) {
             $out = null;
-            $error = Utils::is_known_error($fault) ? $fault->faultstring : null;
+            $error = Utils::get_known_error($fault) ?: Utils::INVALID_PARAMETERS;
         }
 
         return array($out, $error);
     }
+
+  /**
+   * Cancel a response from an ongoing order.
+   *
+   * @since       1.0.0
+   * @param       string      $order_ref      The order reference to cancel.
+   * @return                                  Valid BankID response or null
+   */
+  public function cancel( $order_ref )
+  {
+    $error = null;
+    try {
+      $rest = $this->getClient();
+      $out = json_decode($rest->post('cancel', ['json' => ['orderRef' => $order_ref]] )->getBody()->getContents());
+    } catch ( GuzzleException $fault ) {
+      $out = null;
+      $error = Utils::get_known_error($fault) ?: Utils::INVALID_PARAMETERS;
+    }
+
+    return array($out, $error);
+  }
+
 }

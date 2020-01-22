@@ -20,10 +20,50 @@ class Messages {
     const DEFAULT_MESSAGE = "default";
     const CUSTOM_MESSAGE  = "custom";
 
-    // identifyer keys
+  const RFA_1 = 'RFA1';
 
-    private static $inited = false;
+  const RFA_2 = 'RFA2';
+
+  const RFA_3 = 'RFA3';
+
+  const RFA_4 = 'RFA4';
+
+  const RFA_5 = 'RFA5';
+
+  const RFA_6 = 'RFA6';
+
+  const RFA_8 = 'RFA8';
+
+  const RFA_9 = 'RFA9';
+
+  const RFA_13 = 'RFA13';
+
+  const RFA_14_A = 'RFA14(A)';
+
+  const RFA_14_B = 'RFA14(B)';
+
+  const RFA_15_A = 'RFA15(A)';
+
+  const RFA_15_B = 'RFA15(B)';
+
+  const RFA_16 = 'RFA16';
+
+  const RFA_17 = 'RFA17';
+
+  const RFA_18 = 'RFA18';
+
+  const RFA_19 = 'RFA19';
+
+  const RFA_20 = 'RFA20';
+
+  const RFA_21 = 'RFA21';
+
+  const RFA_22 = 'RFA22';
+
+  private static $inited = false;
+
     private static $identifiers;
+
     private static $messages;
 
     private function __construct() {}
@@ -37,77 +77,85 @@ class Messages {
         self::$messages    = array();
 
         // build the message directory
-        self::register_identifier('RFA1', array('OUTSTANDING_TRANSACTION', 'NO_CLIENT'), array(
+        self::register_identifier(self::RFA_1, array(Utils::OUTSTANDING_TRANSACTION, Utils::NO_CLIENT), array(
             'SV' => 'Starta BankID-appen',
             'EN' => 'Start your BankID app.'
         ));
-        self::register_identifier('RFA2', array(/* The BankID app is not installed in the mobile device. */), array(
+        self::register_identifier(self::RFA_2, array(/* The BankID app is not installed in the mobile device. */), array(
             'SV' => 'Du har inte BankID-appen installerad. Kontakta din internetbank.',
             'EN' => 'The BankID app is not installed. Please contact your internet bank.'
         ));
-        self::register_identifier('RFA3', array('ALREADY_IN_PROGRESS', 'CANCELLED'), array(
+        self::register_identifier(self::RFA_3, array(Utils::CANCELLED), array(
             'SV' => 'Åtgärden avbruten. Försök igen.',
             'EN' => 'Action cancelled. Please try again.'
         ));
-        self::register_identifier('RFA5', array('RETRY', 'INTERNAL_ERROR'), array(
-            'SV' => "Internt tekniskt fel. Försök igen.",
-            'EN' => "Internal error. Please try again."
+        self::register_identifier(self::RFA_4, array(Utils::ALREADY_IN_PROGRESS), array(
+          'SV' => 'En identifiering eller underskrift för det här personnumret är redan påbörjad. Försök igen.',
+          'EN' => 'An identification or signing for this personal number is already started. Please try again.'
         ));
-        self::register_identifier('RFA6', array('USER_CANCEL'), array(
+        self::register_identifier(self::RFA_5, array(Utils::INTERNAL_ERROR), array(
+          'SV' => "Intern tekniskt fel. Försök igen.",
+          'EN' => "Internal error. Please try again."
+        ));
+        self::register_identifier(self::RFA_6, array(Utils::USER_CANCEL), array(
             'SV' => "Åtgärden avbruten.",
             'EN' => "Action cancelled."
         ));
-        self::register_identifier('RFA8', array('EXPIRED_TRANSACTION'), array(
+        self::register_identifier(self::RFA_8, array(Utils::EXPIRED_TRANSACTION), array(
             'SV' => 'BankID-appen svarar inte. Kontrollera att den är startad och att du har internetanslutning. Om du inte har något giltigt BankID kan du hämta ett hos din Bank. Försök sedan igen.',
             'EN' => 'The BankID app is not responding. Please check that the program is started and that you have internet access. If you don’t have a valid BankID you can get one from your bank. Try again.'
         ));
-        self::register_identifier('RFA9', array('USER_SIGN'), array(
+        self::register_identifier(self::RFA_9, array(Utils::USER_SIGN), array(
             'SV' => 'Skriv in din säkerhetskod i BankIDappen och välj Legitimera eller Skriv under.',
             'EN' => 'Enter your security code in the BankID app and select Identify or Sign.'
         ));
-        self::register_identifier('RFA12', array('CLIENT_ERR'), array(
-            'SV' => 'Internt tekniskt fel. Uppdatera BankID-appen och försök igen.',
-            'EN' => 'Internal error. Update your BankID app and try again.'
-        ));
-        self::register_identifier('RFA13', array('OUTSTANDING_TRANSACTION'), array(
+        self::register_identifier(self::RFA_13, array(Utils::OUTSTANDING_TRANSACTION), array(
             'SV' => 'Försöker starta BankID-appen.',
             'EN' => 'Trying to start your BankID app.'
         ));
-        self::register_identifier('RFA14(A)', array('STARTED' /*The RP provided the ID number in the web service call (without using AutoStartTokenRequired). The user accesses the service using a personal computer.*/), array(
+        self::register_identifier(self::RFA_14_A, array(Utils::STARTED /*The RP provided the ID number in the web service call (without using AutoStartTokenRequired). The user accesses the service using a personal computer.*/), array(
             'SV' => 'Söker efter BankID, det kan ta en liten stund… Om det har gått några sekunder och inget BankID har hittats har du sannolikt inget BankID som går att använda för den aktuella inloggningen/underskriften i den här datorn. Om du har ett BankIDkort, sätt in det i kortläsaren. Om du inte har något BankID kan du hämta ett hos din internetbank. Om du har ett BankID på en annan enhet kan du starta din BankID-app där.',
             'EN' => 'Searching for BankID:s, it may take a little while… If a few seconds have passed and still no BankID has been found, you probably don’t have a BankID which can be used for this login/signature on this computer. If you have a BankID card, please insert it into your card reader. If you don’t have a BankID you can order one from your internet bank. If you have a BankID on another device you can start the BankID app on that device.'
         ));
-        self::register_identifier('RFA14(B)', array('STARTED' /*The RP provided the ID number in the web service call (without using AutoStartTokenRequired). The user accesses the service using a mobile device.*/), array(
+        self::register_identifier(self::RFA_14_B, array(Utils::STARTED /*The RP provided the ID number in the web service call (without using AutoStartTokenRequired). The user accesses the service using a mobile device.*/), array(
             'SV' => 'Söker efter BankID, det kan ta en liten stund… Om det har gått några sekunder och inget BankID har hittats har du sannolikt inget BankID som går att använda för den aktuella inloggningen/underskriften i den här enheten. Om du inte har något BankID kan du hämta ett hos din internetbank. Om du har ett BankID på en annan enhet kan du starta din BankID-app där.',
             'EN' => 'Searching for BankID:s, it may take a little while… If a few seconds have passed and still no BankID has been found, you probably don’t have a BankID which can be used for this login/signature on this device. If you don’t have a BankID you can order one from your internet bank. If you have a BankID on another device you can start the BankID app on that device.'
         ));
-        self::register_identifier('RFA15(A)', array('STARTED' /*The RP did not provide the ID number in the web service call. The user accesses the service using a personal computer.*/), array(
+        self::register_identifier(self::RFA_15_A, array(Utils::STARTED /*The RP did not provide the ID number in the web service call. The user accesses the service using a personal computer.*/), array(
             'SV' => 'Söker efter BankID, det kan ta en liten stund… Om det har gått några sekunder och inget BankID har hittats har du sannolikt inget BankID som går att använda för den aktuella inloggningen/underskriften i den här datorn. Om du har ett BankIDkort, sätt in det i kortläsaren. Om du inte har något BankID kan du hämta ett hos din internetbank.',
             'EN' => 'Searching for BankID:s, it may take a little while… If a few seconds have passed and still no BankID has been found, you probably don’t have a BankID which can be used for this login/signature on this computer. If you have a BankID card, please insert it into your card reader. If you don’t have a BankID you can order one from your internet bank.'
         ));
-        self::register_identifier('RFA15(B)', array('STARTED' /*The RP did not provide the ID number in the web service call. The user accesses the service using a mobile device. */), array(
+        self::register_identifier(self::RFA_15_B, array(Utils::STARTED /*The RP did not provide the ID number in the web service call. The user accesses the service using a mobile device. */), array(
             'SV' => 'Söker efter BankID, det kan ta en liten stund… Om det har gått några sekunder och inget BankID har hittats har du sannolikt inget BankID som går att använda för den aktuella inloggningen/underskriften i den här enheten. Om du inte har något BankID kan du hämta ett hos din internetbank.',
             'EN' => 'Searching for BankID:s, it may take a little while… If a few seconds have passed and still no BankID has been found, you probably don’t have a BankID which can be used for this login/signature on this device. If you don’t have a BankID you can order one from your internet bank',
         ));
-        self::register_identifier('RFA16', array('CERTIFICATE_ERR'), array(
+        self::register_identifier(self::RFA_16, array(Utils::CERTIFICATE_ERR), array(
             'SV' => 'Det BankID du försöker använda är för gammalt eller spärrat. Använd ett annat BankID eller hämta ett nytt hos din internetbank.',
             'EN' => 'The BankID you are trying to use is revoked or too old. Please use another BankID or order a new one from your internet bank.'
         ));
-        self::register_identifier('RFA17', array('START_FAILED'), array(
+        self::register_identifier(self::RFA_17, array(Utils::START_FAILED), array(
             'SV' => 'BankID-appen verkar inte finnas i din dator eller telefon. Installera den och hämta ett BankID hos din internetbank. Installera appen från install.bankid.com.',
             'EN' => 'The BankID app couldn’t be found on your computer or mobile device. Please install it and order a BankID from your internet bank. Install the app from install.bankid.com.',
         ));
-        self::register_identifier('RFA18', array( /* The name of link or button used to start the BankID App */ ), array(
+        self::register_identifier(self::RFA_18, array( /* The name of link or button used to start the BankID App */ ), array(
             'SV' => 'Starta BankID-appen',
             'EN' => 'Start the BankID app'
         ));
-        self::register_identifier('RFA19', array( /*The user access the service using a browser on a personal computer.*/ ), array(
+        self::register_identifier(self::RFA_19, array( /*The user access the service using a browser on a personal computer.*/ ), array(
             'SV' => 'Vill du logga in eller skriva under med BankID på den här datorn eller med ett Mobilt BankID?',
             'EN' => 'Would you like to login or sign with a BankID on this computer or with a Mobile BankID?'
         ));
-        self::register_identifier('RFA20', array( /*The user access the service using a browser on a mobile device.*/ ), array(
+        self::register_identifier(self::RFA_20, array( /*The user access the service using a browser on a mobile device.*/ ), array(
             'SV' => 'Vill du logga in eller skriva under med ett BankID på den här enheten eller med ett BankID på en annan enhet?',
             'EN' => 'Would you like to login or sign with a BankID on this device or with a BankID on another device?'
+        ));
+        self::register_identifier(self::RFA_21, array( /*The user access the service using a browser on a mobile device.*/ ), array(
+          'SV' => 'Identifiering eller underskrift pågår.',
+          'EN' => 'Identification or signing in progress.'
+        ));
+        self::register_identifier(self::RFA_22, array( /*The user access the service using a browser on a mobile device.*/ ), array(
+          'SV' => 'Okänt fel. Försök igen.',
+          'EN' => 'Unknown error. Please try again.'
         ));
         self::$inited = true;
     }
@@ -147,7 +195,7 @@ class Messages {
     }
 
     private static function register_identifier($identifier, $mappings, $default_messages = array()) {
-        self::throw_if(array_key_exists($identifier, self::$identifiers), "identifyer " . $identifier . " is already registered!");
+        self::throw_if(array_key_exists($identifier, self::$identifiers), "identifier " . $identifier . " is already registered!");
         self::$identifiers[$identifier] = $mappings;
         foreach ($default_messages as $language_code => $message) {
             self::register_message(self::DEFAULT_MESSAGE, $identifier, $language_code, $message);
