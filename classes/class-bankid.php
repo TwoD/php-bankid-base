@@ -62,16 +62,16 @@ class BankID
 
         $fixed_settings = array(
              'test_server' => array(
-                 'api_url'   => 'https://appapi.test.bankid.com/rp/v4',
-                 'wdsl_url'  => 'https://appapi.test.bankid.com/rp/v4?wsdl',
-                 'cert_path' => __DIR__ . '/../certs/appapi.test.bankid.com.pem',
-                 'peer_name' => 'appapi.test.bankid.com'
+                 'api_url'   => 'https://appapi2.test.bankid.com/rp/v4',
+                 'wdsl_url'  => 'https://appapi2.test.bankid.com/rp/v4?wsdl',
+                 'cert_path' => __DIR__ . '/../certs/appapi2.test.bankid.com.pem',
+                 'peer_name' => 'appapi2.test.bankid.com',
              ),
              'production_server' => array(
-                 'api_url'   => 'https://appapi.bankid.com/rp/v4',
-                 'wdsl_url'  => 'https://appapi.bankid.com/rp/v4?wsdl',
-                 'cert_path' => __DIR__ . '/../certs/appapi.bankid.com.pem',
-                 'peer_name' => 'appapi.bankid.com'
+                 'api_url'   => 'https://appapi2.bankid.com/rp/v4',
+                 'wdsl_url'  => 'https://appapi2.bankid.com/rp/v4?wsdl',
+                 'cert_path' => __DIR__ . '/../certs/appapi2.bankid.com.pem',
+                 'peer_name' => 'appapi2.bankid.com',
              )
         );
 
