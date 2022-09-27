@@ -53,6 +53,8 @@ class Utils
 
     const USER_SIGN = 'userSign';
 
+    const COMPLETE = 'complete';
+
     const _PENDING_UNKNOWN = '_pending_unknown';
 
     const _FAILED_UNKNOWN = '_failed_unknown';

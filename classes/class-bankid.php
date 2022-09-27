@@ -17,8 +17,6 @@ use GuzzleHttp\Handler\StreamHandler;
 use GuzzleHttp\HandlerStack;
 use \Exception as Exception;
 
-require_once __DIR__ . '/../vendor/autoload.php';
-
 class BankID
 {
 
