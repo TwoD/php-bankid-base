@@ -12,6 +12,7 @@
 namespace BankID;
 
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 
 class Utils
 {
@@ -203,10 +204,10 @@ class Utils
     }
 
     public static function convert_fault(GuzzleException $fault) {
-      if ($fault->getResponse()) {
+      if ($fault instanceof RequestException && $fault->getResponse()) {
         return json_decode($fault->getResponse()->getBody());
       }
-      return NULL;
+      throw $fault;
     }
 
     private static function is_known_error_identifier($identifier) {

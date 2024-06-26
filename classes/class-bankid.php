@@ -69,12 +69,12 @@ class BankID
 
         $fixed_settings = array(
              'test_server' => array(
-                 'api_url'   => 'https://appapi2.test.bankid.com/rp/v5.1/',
+                 'api_url'   => 'https://appapi2.test.bankid.com/rp/v6.0/',
                  'cert_path' => __DIR__ . '/../certs/appapi2.test.bankid.com.pem',
                  'peer_name' => 'appapi2.test.bankid.com',
              ),
              'production_server' => array(
-                 'api_url'   => 'https://appapi2.bankid.com/rp/v5.1/',
+                 'api_url'   => 'https://appapi2.bankid.com/rp/v6.0/',
                  'cert_path' => __DIR__ . '/../certs/appapi2.bankid.com.pem',
                  'peer_name' => 'appapi2.bankid.com',
              )
@@ -106,9 +106,19 @@ class BankID
                 throw new Exception("Unable to load your certificate file! " . $certificate_path, 2);
             }
 
+            // make sure test or production RP certificate exists
+            if(!is_readable($certificate_path)){
+              throw new Exception("Unable to read your certificate file! " . $certificate_path, 2);
+            }
+
             // make sure the bankid server certificate for the selected server exists
             if(!file_exists($server['cert_path'])){
                 throw new Exception("Unable to find bankid certificate: " . $server['cert_path'], 3);
+            }
+
+            // make sure the bankid server certificate for the selected server is readable.
+            if(!is_readable($server['cert_path'])){
+              throw new Exception("Unable to read certificate: " . $server['cert_path'], 3);
             }
 
             $stream_handler = new StreamHandler();
@@ -136,7 +146,7 @@ class BankID
      * Start an authentication process for a user against BankID.
      *
      * @since       1.0.0
-     * @param       string      $ssn                   The SSN of the person you want to authenticate, format YYYYMMDDXXXX
+     * @param       string      $ssn                   The SSN of the person you want to authenticate, format YYYYMMDDXXXX. Leave empty to not require a specific SSN.
      * @param       string      $kwargs                Keyword argument array to allow any number of the additional BankID settings.
      * @param       string      $visible_data          Optional data that the user will be shown when authenticating.
      * @param       string      $hidden_data           Optional data that will be held at BankIDs servers. Example use: Verify that the data signed is correct and hasn't been tampered with.
@@ -149,7 +159,9 @@ class BankID
         $error = null;
         try {
             $rest = $this->getClient();
-            $kwargs['personalNumber'] = $ssn;
+            if ($ssn !== '') {
+              $kwargs['requirement']['personalNumber'] = $ssn;
+            }
             if ($visible_data) {
               $kwargs['userVisibleData'] = Utils::normalize_text(base64_encode($visible_data));
             }
@@ -173,7 +185,7 @@ class BankID
      * Start a signing process for a user against BankID.
      *
      * @since       1.0.0
-     * @param       string      $ssn                   The SSN of the person you want to sign the data.
+     * @param       string      $ssn                   The SSN of the person you want to sign the data. Leave empty to not require a specific SSN.
      * @param       string      $visible_data          The data that the user will be prompted to sign.
      * @param       string      $hidden_data           The data that will be held at BankIDs servers. Example use: Verify that the data signed is correct and hasn't been tampered with.
      * @param       array       $kwargs                Keyword argument array to allow any of the additional BankID settings.
@@ -186,7 +198,9 @@ class BankID
         $error = null;
         try {
             $rest = $this->getClient();
-            $kwargs['personalNumber'] = $ssn;
+            if ($ssn !== '') {
+              $kwargs['requirement']['personalNumber'] = $ssn;
+            }
             $kwargs['userVisibleData'] = Utils::normalize_text( base64_encode( $visible_data ) );
             if ($visible_data_format) {
               $kwargs['userVisibleDataFormat'] = $visible_data_format;
